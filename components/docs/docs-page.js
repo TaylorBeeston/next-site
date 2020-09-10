@@ -1,4 +1,4 @@
-import { memo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { getSlug, removeFromLast, addTagToSlug } from '../../lib/docs/utils';
@@ -10,41 +10,29 @@ import ArrowIcon from '../arrow-icon';
 import RightArrow from '../icons/arrow-right';
 import LeftArrow from '../icons/arrow-left';
 
-function areEqual(prevProps, props) {
-  return prevProps.route.path === props.route.path;
-}
-
 function DocsPage({ route, html, prevRoute, nextRoute }) {
   const router = useRouter();
-  const { tag, slug } = getSlug(router.query);
-  const href = '/docs/[[...slug]]';
+  const { asPath, query } = router;
+  const { tag, slug } = getSlug(query);
   const editUrl = `${GITHUB_URL}/${REPO_NAME}/edit/canary${route.path}`;
 
   useEffect(() => {
     const listeners = [];
 
     document.querySelectorAll('.docs-content a.relative').forEach(node => {
-      const nodeHref = node.getAttribute('href');
+      const href = node.getAttribute('href');
       // Exclude paths like #setup and hashes that have the same current path
-      if (nodeHref && nodeHref[0] !== '#' && !nodeHref.startsWith(slug)) {
-        if (nodeHref.startsWith('/docs')) {
-          // Handle relative documentation paths
-          const as = addTagToSlug(nodeHref, tag);
-
-          router.prefetch(href, as);
-          listeners.push(addRouterEvents(node, router, { href, as }));
-        } else {
-          // Handle any other relative path
-          router.prefetch(nodeHref);
-          listeners.push(addRouterEvents(node, router, { href: nodeHref }));
-        }
+      if (href && href[0] !== '#' && !href.startsWith(asPath)) {
+        // Handle any relative path
+        router.prefetch(href);
+        listeners.push(addRouterEvents(node, router, { href }));
       }
     });
 
     return () => {
       listeners.forEach(cleanUpListener => cleanUpListener());
     };
-  }, [slug]);
+  }, [asPath]);
 
   return (
     <div className="docs">
@@ -53,7 +41,7 @@ function DocsPage({ route, html, prevRoute, nextRoute }) {
 
       <div className="page-nav">
         {prevRoute ? (
-          <Button href={href} as={addTagToSlug(removeFromLast(prevRoute.path, '.'), tag)}>
+          <Button href={addTagToSlug(removeFromLast(prevRoute.path, '.'), tag)}>
             <ArrowIcon left flex>
               <LeftArrow color="#0070f3" />
             </ArrowIcon>
@@ -63,7 +51,7 @@ function DocsPage({ route, html, prevRoute, nextRoute }) {
           <span />
         )}
         {nextRoute && (
-          <Button href={href} as={addTagToSlug(removeFromLast(nextRoute.path, '.'), tag)}>
+          <Button href={addTagToSlug(removeFromLast(nextRoute.path, '.'), tag)}>
             {nextRoute.title}
             <ArrowIcon right flex>
               <RightArrow color="#0070f3" />
@@ -78,7 +66,7 @@ function DocsPage({ route, html, prevRoute, nextRoute }) {
 
       <footer>
         {tag ? (
-          <Link href="/docs/[[...slug]]" as={slug}>
+          <Link href={slug}>
             <a>Go to the live version of this page</a>
           </Link>
         ) : (
@@ -303,4 +291,4 @@ function DocsPage({ route, html, prevRoute, nextRoute }) {
   );
 }
 
-export default memo(DocsPage, areEqual);
+export default DocsPage;
